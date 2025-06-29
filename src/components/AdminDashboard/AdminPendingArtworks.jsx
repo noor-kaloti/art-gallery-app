@@ -242,6 +242,44 @@ const AdminPendingArtworks = () => {
       return updated;
     });
   };
+  const handleRejection = async (exhibitionId, artworkId, userId) => {
+    const confirm = window.confirm("האם אתה בטוח שברצונך לדחות יצירה זו?");
+    if (!confirm) return;
+
+    const userRef = doc(
+      db,
+      "users",
+      userId,
+      "registrations",
+      exhibitionId,
+      "artworks",
+      artworkId
+    );
+    const centralRef = doc(
+      db,
+      "exhibition_artworks",
+      exhibitionId,
+      "artworks",
+      artworkId
+    );
+
+    await Promise.all([
+      updateDoc(userRef, { rejected: true }),
+      updateDoc(centralRef, { rejected: true }),
+    ]);
+
+    setPendingGrouped((prev) => {
+      const updated = { ...prev };
+      updated[exhibitionId].artworks = updated[exhibitionId].artworks.filter(
+        (a) => a.id !== artworkId
+      );
+      if (updated[exhibitionId].artworks.length === 0) {
+        delete updated[exhibitionId];
+        setSelectedExhibition(null);
+      }
+      return updated;
+    });
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10" dir="rtl">
@@ -301,14 +339,28 @@ const AdminPendingArtworks = () => {
                     <p className="text-sm text-gray-600 mb-3">
                       <strong>מחיר:</strong> {art.price || "—"}
                     </p>
-                    <button
-                      onClick={() =>
-                        handleApproval(selectedExhibition, art.id, art.userId)
-                      }
-                      className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 rounded-lg"
-                    >
-                      ✔️ אשר יצירה
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() =>
+                          handleApproval(selectedExhibition, art.id, art.userId)
+                        }
+                        className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 rounded-lg"
+                      >
+                        ✔️ אשר יצירה
+                      </button>
+                      <button
+                        onClick={() =>
+                          handleRejection(
+                            selectedExhibition,
+                            art.id,
+                            art.userId
+                          )
+                        }
+                        className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 rounded-lg"
+                      >
+                        ❌ דחה
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
